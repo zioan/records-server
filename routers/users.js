@@ -8,7 +8,7 @@ const auth = require('../middleware/auth');
 //create table is not already
 router.get('/createuserstable', (req, res) => {
   let sql =
-    'CREATE TABLE users(id int AUTO_INCREMENT, admin BOOLEAN not null default false, name VARCHAR(255), surname VARCHAR(255), address VARCHAR(255), email VARCHAR(255), passwordHash VARCHAR(255), PRIMARY KEY (id))';
+    'CREATE TABLE users(id int AUTO_INCREMENT, admin BOOLEAN not null default false, name VARCHAR(255), passwordHash VARCHAR(255), PRIMARY KEY (id))';
   db.query(sql, (err, result) => {
     if (err) {
       console.log(err);
@@ -37,14 +37,11 @@ router.post('/register', (req, res) => {
   const newUserData = {
     admin: req.body.admin,
     name: req.body.name,
-    surname: req.body.surname,
-    address: req.body.address,
-    email: req.body.email,
     passwordHash: bcrypt.hashSync(req.body.password, 10),
   };
 
   // check is email already registered
-  const findQuery = `SELECT * FROM users WHERE email = "${req.body.email}"`;
+  const findQuery = `SELECT * FROM users WHERE name = "${req.body.name}"`;
   const existingUser = db.query(findQuery, (err, result) => {
     if (err) {
       return res.json({ message: err });
@@ -53,7 +50,7 @@ router.post('/register', (req, res) => {
       return res.status(400).send('User already exists');
     }
 
-    //if no email found, register new user
+    //if no user found, register new user
     const createNewUser = 'INSERT INTO users set ?';
     db.query(createNewUser, newUserData, (err, result) => {
       if (err) {
@@ -64,9 +61,6 @@ router.post('/register', (req, res) => {
             id: result.insertId,
             admin: 0,
             name: newUserData.name,
-            surname: newUserData.surname,
-            address: newUserData.address,
-            email: newUserData.email,
           },
           process.env.SECRET,
           {
@@ -92,9 +86,6 @@ router.post('/register', (req, res) => {
             id: result.insertId,
             admin: 0,
             name: newUserData.name,
-            surname: newUserData.surname,
-            address: newUserData.address,
-            email: newUserData.email,
             token: token,
           });
       }
@@ -104,11 +95,11 @@ router.post('/register', (req, res) => {
 
 //login
 router.post('/login', (req, res) => {
-  const findQuery = `SELECT * FROM users WHERE email = "${req.body.email}"`;
+  const findQuery = `SELECT * FROM users WHERE name = "${req.body.name}"`;
 
   const findUser = db.query(findQuery, (err, result) => {
     if (err) {
-      return res.send('No user found for this email address!');
+      return res.send('No user found!');
     }
     if (result.length > 0) {
       if (bcrypt.compareSync(req.body.password, result[0].passwordHash)) {
@@ -117,9 +108,6 @@ router.post('/login', (req, res) => {
             id: result[0].id,
             admin: result[0].admin,
             name: result[0].name,
-            surname: result[0].surname,
-            address: result[0].address,
-            email: result[0].email,
           },
           process.env.SECRET,
           {
@@ -143,9 +131,6 @@ router.post('/login', (req, res) => {
             id: result[0].id,
             admin: result[0].admin,
             name: result[0].name,
-            surname: result[0].surname,
-            address: result[0].address,
-            email: result[0].email,
             token: token,
           });
       } else {
@@ -161,8 +146,6 @@ router.post('/login', (req, res) => {
 router.put('/update/:id', (req, res) => {
   const newData = {
     name: req.body.name,
-    surname: req.body.surname,
-    address: req.body.address,
   };
 
   const sql = `UPDATE users SET name = '${newData.name}', surname = '${newData.surname}', address = '${newData.address}' WHERE id = ${req.params.id}`;
@@ -176,35 +159,35 @@ router.put('/update/:id', (req, res) => {
 });
 
 // update user email
-router.put('/update/email/:id', (req, res) => {
-  const newData = {
-    email: req.body.email,
-  };
+// router.put('/update/email/:id', (req, res) => {
+//   const newData = {
+//     email: req.body.email,
+//   };
 
-  const sql = `UPDATE users SET email = '${newData.email}' WHERE id = ${req.params.id}`;
-  db.query(sql, (err, result) => {
-    if (err) {
-      return res.json({ message: err });
-    } else {
-      return res.json({ message: result });
-    }
-  });
-});
+//   const sql = `UPDATE users SET email = '${newData.email}' WHERE id = ${req.params.id}`;
+//   db.query(sql, (err, result) => {
+//     if (err) {
+//       return res.json({ message: err });
+//     } else {
+//       return res.json({ message: result });
+//     }
+//   });
+// });
 
 // update user password
 router.put('/update/password/:id', (req, res) => {
   const newData = {
-    email: req.body.email,
+    name: req.body.name,
     password: req.body.password,
     passwordHash: bcrypt.hashSync(req.body.newPassword, 10),
   };
 
   // check user and current password
-  const findQuery = `SELECT * FROM users WHERE email = "${newData.email}"`;
+  const findQuery = `SELECT * FROM users WHERE name = "${newData.name}"`;
 
   const findUser = db.query(findQuery, (err, result) => {
     if (err) {
-      return res.send('No user found for this email address!');
+      return res.send('No user found!');
     }
 
     // if user
